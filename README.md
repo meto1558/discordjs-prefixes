@@ -43,7 +43,9 @@ Run the bot.
 ```bash
 node your_app.js
 ```
-Have fun.
+![Test command](https://cdn.discordapp.com/attachments/1103629924549541930/1275123317535277167/image.png?ex=66c4bea1&is=66c36d21&hm=38e0d921ba59330fd842c3e0eb3235ea0cfb3b4f2cef647f224b8cb12d3789c4&)
+
+**Have fun**.
 
 ## Contributing
 I really need some help :c Anyway, feel free to contribute to this project, I always accept help from nice people.

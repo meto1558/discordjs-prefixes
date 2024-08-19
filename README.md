@@ -9,5 +9,49 @@ npm install discord.js discordjs-prefixes
 You can write commands in a single file or categorize them. I recommend categorizing them, it is easier to manage.
 Next, write your bot code and integrate prefix commands.
 ```js
+// This is an example, I will code the categorized command example later.
 const { Client, GatewayIntentBits } = require("discord.js");
-const { Comm
+const { CommandManager, PrefixCommandBuilder } = require("discordjs-prefixes");
+
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
+    ]
+});
+
+const cmdManager = new CommandManager(client, {
+    prefix: "?" // You can change this
+});
+
+// Create a command
+const myCommand = new PrefixCommandBuilder()
+    .setName("hello")
+    .runCommand((ctx) => {
+        ctx.send("This is a prefix command written with meto1558's command manager!");
+    });
+
+// Registering command(s)
+cmdManager.registerCommands(myCommand); // and more...
+
+// Login the Discord Gateway
+client.login("YOUR_DISCORD_BOT_TOKEN");
+```
+Run the bot.
+```bash
+node your_app.js
+```
+Have fun.
+
+## Contributing
+I really need some help :c Anyway, feel free to contribute to this project, I always accept help from nice people.
+### Steps
+- Create a new fork.
+- Open the project in a code editor (like VS Code).
+- Add/modify some code.
+- Commit and push your changes to your forked repository.
+- Create a new pull request using your forked repository.
+- Wait for your pull request to be accepted.
+- Done!

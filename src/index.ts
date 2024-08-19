@@ -298,12 +298,14 @@ export class PrefixCommandBuilder {
         this.requiredContext = context;
     }
 
-    public setName(name: string): void {
+    public setName(name: string) {
         this.name = name;
+        return this;
     }
 
     public runCommand(executor?: (ctx: CommandContext) => void) {
         this.executor = executor;
+        return this;
     }
 
     public prepareCommand() {

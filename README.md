@@ -47,6 +47,9 @@ node your_app.js
 
 **Have fun**.
 
+# Reminder
+This project is subject to [MIT](https://mit-license.org/) license. Please use the project within the license rules.
+
 ## Contributing
 I really need some help :c Anyway, feel free to contribute to this project, I always accept help from nice people.
 ### Steps

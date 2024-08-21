@@ -1,13 +1,113 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CommandManager = exports.PrefixCommandBuilder = exports.CommandContext = exports.CommandOptions = void 0;
-class CommandOptions {
+exports.PrefixCommandManager = exports.PrefixCommandBuilder = exports.CommandContext = exports.CommandParameters = exports.sharedOptionList = exports.ParameterError = exports.PrefixCommandBuilderSettings = void 0;
+class PrefixCommandBuilderSettings {
 }
-exports.CommandOptions = CommandOptions;
+exports.PrefixCommandBuilderSettings = PrefixCommandBuilderSettings;
+class ParameterError extends Error {
+}
+exports.ParameterError = ParameterError;
+exports.sharedOptionList = [];
+class CommandParameters {
+    constructor() {
+        this.options = [];
+    }
+    addOptions(...options) {
+        this.options.push(...options);
+    }
+    getStringOption(name) {
+        const option = this.getOption(name);
+        const type = this.getOptionType(name);
+        if (!option || !type)
+            return undefined;
+        if (type != "string") {
+            throw new ParameterError(`The type of the '${name}' option is ${type}, but it is not being called as ${type}. Are you making a mistake?`);
+        }
+        return String(option);
+    }
+    getNumberOption(name) {
+        const option = this.getOption(name);
+        const type = this.getOptionType(name);
+        if (!option || !type)
+            return undefined;
+        if (type != "number") {
+            throw new ParameterError(`The type of the '${name}' option is ${type}, but it is not being called as ${type}. Are you making a mistake?`);
+        }
+        return Number(option);
+    }
+    getUserOption(name) {
+        const option = this.getOption(name);
+        const type = this.getOptionType(name);
+        if (!option || !type)
+            return undefined;
+        if (type != "user") {
+            throw new ParameterError(`The type of the '${name}' option is ${type}, but it is not being called as ${type}. Are you making a mistake?`);
+        }
+        return option;
+    }
+    getMemberOption(name) {
+        const option = this.getOption(name);
+        const type = this.getOptionType(name);
+        if (!option || !type)
+            return undefined;
+        if (type != "member") {
+            throw new ParameterError(`The type of the '${name}' option is ${type}, but it is not being called as ${type}. Are you making a mistake?`);
+        }
+        return option;
+    }
+    getChannelOption(name) {
+        const option = this.getOption(name);
+        const type = this.getOptionType(name);
+        if (!option || !type)
+            return undefined;
+        if (type != "channel") {
+            throw new ParameterError(`The type of the '${name}' option is ${type}, but it is not being called as ${type}. Are you making a mistake?`);
+        }
+        return option;
+    }
+    getRoleOption(name) {
+        const option = this.getOption(name);
+        const type = this.getOptionType(name);
+        if (!option || !type)
+            return undefined;
+        if (type != "role") {
+            throw new ParameterError(`The type of the '${name}' option is ${type}, but it is not being called as ${type}. Are you making a mistake?`);
+        }
+        return option;
+    }
+    getOption(name) {
+        if (this.options.length < 1)
+            return undefined;
+        for (const option of this.options) {
+            if (!option.name.trim())
+                throw new ParameterError(`The option name cannot be empty.`);
+            if (option.name === name)
+                return option.value;
+        }
+        throw new ParameterError(`There is no such option: '${name}'`);
+    }
+    getOptionType(name) {
+        if (this.options.length < 1)
+            return undefined;
+        for (const option of this.options) {
+            if (!option.name.trim())
+                throw new ParameterError(`The option name cannot be empty.`);
+            if (!option.type)
+                throw new ParameterError(`The option type cannot be empty.`);
+            if (option.name === name)
+                return option.type;
+        }
+        throw new ParameterError(`There is no such option: '${name}'`);
+    }
+}
+exports.CommandParameters = CommandParameters;
 class CommandContext {
     constructor(messageObject) {
+        this.options = new CommandParameters();
         this.messageObject = messageObject;
+        this.options.addOptions(...exports.sharedOptionList);
     }
+    // Message Class Proxy
     get activity() {
         return this.messageObject.activity;
     }
@@ -206,11 +306,47 @@ class CommandContext {
     inGuild() {
         return this.messageObject.inGuild();
     }
+    // Special properties/methods
     get me() {
-        return this.messageObject.client;
+        return this.messageObject.client.user;
     }
     send(options) {
         return this.messageObject.channel.send(options);
+    }
+    prepareOptionValues() {
+        const args = this.messageObject.content.trim().split(" ");
+        const startingIndex = args.length + 1; // Skip command name
+        const mentions = this.messageObject.mentions;
+        exports.sharedOptionList.forEach((option, index) => {
+            switch (option.type) {
+                case "user":
+                    if (mentions.users.size > 0) {
+                        option.value = mentions.users.first();
+                        return;
+                    }
+                case "member":
+                    if (mentions.members.size > 0) {
+                        option.value = mentions.members.first();
+                        return;
+                    }
+                case "channel":
+                    if (mentions.channels.size > 0) {
+                        option.value = mentions.channels.first();
+                        return;
+                    }
+                case "role":
+                    if (mentions.roles.size > 0) {
+                        option.value = mentions.roles.first();
+                        return;
+                    }
+            }
+            if (option.isLongText && option.type != "string")
+                throw new ParameterError(`Long text can only be of type string. (Reminder: Long text options can only be added as a last option.)`);
+            else if (option.isLongText && option.type == "string")
+                option.value = args.slice(index, args.length + 1).join(" ");
+            else
+                option.value = args[index];
+        });
     }
 }
 exports.CommandContext = CommandContext;
@@ -230,9 +366,13 @@ class PrefixCommandBuilder {
         if (this.executor && this.requiredContext)
             this.executor(this.requiredContext);
     }
+    addOptions(...options) {
+        exports.sharedOptionList.push(...options);
+        return this;
+    }
 }
 exports.PrefixCommandBuilder = PrefixCommandBuilder;
-class CommandManager {
+class PrefixCommandManager {
     constructor(client, options) {
         this.client = client;
         this.options = options;
@@ -243,10 +383,11 @@ class CommandManager {
                 const context = new CommandContext(msg);
                 command.setContext(context);
                 if (msg.content.startsWith(`${this.options.prefix}${command.name}`)) {
+                    context.prepareOptionValues();
                     command.prepareCommand();
                 }
             }
         });
     }
 }
-exports.CommandManager = CommandManager;
+exports.PrefixCommandManager = PrefixCommandManager;

@@ -1,17 +1,146 @@
-import { Client, Message, Snowflake, Collection, MessageActionRowComponent, AwaitMessageCollectorOptionsParams, MappedInteractionTypes, MessageComponentType, AwaitReactionsOptions, ReactionCollectorOptions, ReactionCollector, MessageCollectorOptionsParams, InteractionCollector, MessageEditOptions, MessagePayload, EmojiIdentifierResolvable, MessageReaction, MessageReplyOptions, StartThreadOptions, AnyThreadChannel, MessageCreateOptions } from "discord.js";
+import { Client, Message, Snowflake, Collection, MessageActionRowComponent, AwaitMessageCollectorOptionsParams, MappedInteractionTypes, MessageComponentType, AwaitReactionsOptions, ReactionCollectorOptions, ReactionCollector, MessageCollectorOptionsParams, InteractionCollector, MessageEditOptions, MessagePayload, EmojiIdentifierResolvable, MessageReaction, MessageReplyOptions, StartThreadOptions, AnyThreadChannel, MessageCreateOptions, User, GuildMember, Channel, Role, ClientUser } from "discord.js";
 
-export class CommandOptions {
+export class PrefixCommandBuilderSettings {
     prefix: string;
-    useHelpCommand?: boolean | undefined; 
+    useHelpCommand?: boolean | undefined;
+}
+
+export type CommandParameterType =
+    "string" |
+    "number" |
+    "text" |
+    "user" |
+    "member" |
+    "channel" |
+    "role";
+
+export interface CommandParameterOptions {
+    name: string | undefined;
+    type: CommandParameterType | undefined;
+    isLongText?: boolean | undefined;
+    value?: any | undefined;
+}
+
+export class ParameterError extends Error { }
+
+export let sharedOptionList: CommandParameterOptions[] = [];
+
+export class CommandParameters {
+    private options: CommandParameterOptions[] = [];
+
+    public addOptions(...options: CommandParameterOptions[]) {
+        this.options.push(...options);
+
+    }
+
+    public getStringOption(name: string): string | undefined {
+        const option = this.getOption(name);
+        const type = this.getOptionType(name);
+        if (!option || !type) return undefined;
+
+        if (type != "string") {
+            throw new ParameterError(`The type of the '${name}' option is ${type}, but it is not being called as ${type}. Are you making a mistake?`);
+        }
+
+        return String(option);
+    }
+
+    public getNumberOption(name: string): number | undefined {
+        const option = this.getOption(name);
+        const type = this.getOptionType(name);
+        if (!option || !type) return undefined;
+
+        if (type != "number") {
+            throw new ParameterError(`The type of the '${name}' option is ${type}, but it is not being called as ${type}. Are you making a mistake?`);
+        }
+
+        return Number(option);
+    }
+
+    public getUserOption(name: string): User | ClientUser | undefined {
+        const option = this.getOption(name);
+        const type = this.getOptionType(name);
+        if (!option || !type) return undefined;
+
+        if (type != "user") {
+            throw new ParameterError(`The type of the '${name}' option is ${type}, but it is not being called as ${type}. Are you making a mistake?`);
+        }
+
+        return option as User | ClientUser;
+    }
+
+    public getMemberOption(name: string): GuildMember | ClientUser | undefined {
+        const option = this.getOption(name);
+        const type = this.getOptionType(name);
+        if (!option || !type) return undefined;
+
+        if (type != "member") {
+            throw new ParameterError(`The type of the '${name}' option is ${type}, but it is not being called as ${type}. Are you making a mistake?`);
+        }
+
+        return option as GuildMember | ClientUser;
+    }
+
+    public getChannelOption(name: string): Channel | undefined {
+        const option = this.getOption(name);
+        const type = this.getOptionType(name);
+        if (!option || !type) return undefined;
+
+        if (type != "channel") {
+            throw new ParameterError(`The type of the '${name}' option is ${type}, but it is not being called as ${type}. Are you making a mistake?`);
+        }
+
+        return option as Channel;
+    }
+
+    public getRoleOption(name: string): Role | undefined {
+        const option = this.getOption(name);
+        const type = this.getOptionType(name);
+        if (!option || !type) return undefined;
+
+        if (type != "role") {
+            throw new ParameterError(`The type of the '${name}' option is ${type}, but it is not being called as ${type}. Are you making a mistake?`);
+        }
+
+        return option as Role;
+    }
+
+    private getOption(name: string): any | undefined {
+        if (this.options.length < 1) return undefined;
+
+        for (const option of this.options) {
+            if (!option.name.trim()) throw new ParameterError(`The option name cannot be empty.`);
+
+            if (option.name === name) return option.value;
+        }
+
+        throw new ParameterError(`There is no such option: '${name}'`);
+    }
+
+    private getOptionType(name: string): CommandParameterType | undefined {
+        if (this.options.length < 1) return undefined;
+
+        for (const option of this.options) {
+            if (!option.name.trim()) throw new ParameterError(`The option name cannot be empty.`);
+            if (!option.type) throw new ParameterError(`The option type cannot be empty.`);
+
+            if (option.name === name) return option.type;
+        }
+
+        throw new ParameterError(`There is no such option: '${name}'`);
+    }
 }
 
 export class CommandContext<InGuild extends boolean = boolean> {
     protected messageObject: Message;
+    public options = new CommandParameters();
 
     public constructor(messageObject: Message) {
         this.messageObject = messageObject;
+        this.options.addOptions(...sharedOptionList);
     }
 
+    // Message Class Proxy
     public get activity() {
         return this.messageObject.activity;
     }
@@ -280,12 +409,51 @@ export class CommandContext<InGuild extends boolean = boolean> {
         return this.messageObject.inGuild();
     }
 
+    // Special properties/methods
     public get me() {
-        return this.messageObject.client;
+        return this.messageObject.client.user;
     }
 
     public send(options: string | MessagePayload | MessageCreateOptions) {
         return this.messageObject.channel.send(options);
+    }
+
+    public prepareOptionValues() {
+        const args = this.messageObject.content.trim().split(" ");
+        const startingIndex = args.length + 1; // Skip command name
+        const mentions = this.messageObject.mentions;
+
+        sharedOptionList.forEach((option, index) => {
+            switch (option.type) {
+                case "user":
+                    if (mentions.users.size > 0) {
+                        option.value = mentions.users.first();
+                        return;
+                    }
+                case "member":
+                    if (mentions.members.size > 0) {
+                        option.value = mentions.members.first();
+                        return;
+                    }
+                case "channel":
+                    if (mentions.channels.size > 0) {
+                        option.value = mentions.channels.first();
+                        return;
+                    }
+                case "role":
+                    if (mentions.roles.size > 0) {
+                        option.value = mentions.roles.first();
+                        return;
+                    }
+            }
+
+            if (option.isLongText && option.type != "string")
+                throw new ParameterError(`Long text can only be of type string. (Reminder: Long text options can only be added as a last option.)`);
+            else if (option.isLongText && option.type == "string")
+                option.value = args.slice(index, args.length + 1).join(" ");
+            else
+                option.value = args[index];
+        });
     }
 }
 
@@ -312,13 +480,18 @@ export class PrefixCommandBuilder {
         if (this.executor && this.requiredContext)
             this.executor(this.requiredContext);
     }
+
+    public addOptions(...options: CommandParameterOptions[]) {
+        sharedOptionList.push(...options);
+        return this;
+    }
 }
 
-export class CommandManager {
+export class PrefixCommandManager {
     public client: Client;
-    public options: CommandOptions;
+    public options: PrefixCommandBuilderSettings;
 
-    public constructor(client: Client, options: CommandOptions) {
+    public constructor(client: Client, options: PrefixCommandBuilderSettings) {
         this.client = client;
         this.options = options;
     }
@@ -329,6 +502,7 @@ export class CommandManager {
                 const context = new CommandContext(msg);
                 command.setContext(context);
                 if (msg.content.startsWith(`${this.options.prefix}${command.name}`)) {
+                    context.prepareOptionValues();
                     command.prepareCommand();
                 }
             }

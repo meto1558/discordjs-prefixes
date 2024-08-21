@@ -1,15 +1,38 @@
-import { Client, Message, Snowflake, Collection, MessageActionRowComponent, AwaitMessageCollectorOptionsParams, MappedInteractionTypes, MessageComponentType, AwaitReactionsOptions, ReactionCollectorOptions, ReactionCollector, MessageCollectorOptionsParams, InteractionCollector, MessageEditOptions, MessagePayload, EmojiIdentifierResolvable, MessageReaction, MessageReplyOptions, StartThreadOptions, AnyThreadChannel, MessageCreateOptions } from "discord.js";
-export declare class CommandOptions {
+import { Client, Message, Snowflake, Collection, MessageActionRowComponent, AwaitMessageCollectorOptionsParams, MappedInteractionTypes, MessageComponentType, AwaitReactionsOptions, ReactionCollectorOptions, ReactionCollector, MessageCollectorOptionsParams, InteractionCollector, MessageEditOptions, MessagePayload, EmojiIdentifierResolvable, MessageReaction, MessageReplyOptions, StartThreadOptions, AnyThreadChannel, MessageCreateOptions, User, GuildMember, Channel, Role, ClientUser } from "discord.js";
+export declare class PrefixCommandBuilderSettings {
     prefix: string;
     useHelpCommand?: boolean | undefined;
 }
+export type CommandParameterType = "string" | "number" | "text" | "user" | "member" | "channel" | "role";
+export interface CommandParameterOptions {
+    name: string | undefined;
+    type: CommandParameterType | undefined;
+    isLongText?: boolean | undefined;
+    value?: any | undefined;
+}
+export declare class ParameterError extends Error {
+}
+export declare let sharedOptionList: CommandParameterOptions[];
+export declare class CommandParameters {
+    private options;
+    addOptions(...options: CommandParameterOptions[]): void;
+    getStringOption(name: string): string | undefined;
+    getNumberOption(name: string): number | undefined;
+    getUserOption(name: string): User | ClientUser | undefined;
+    getMemberOption(name: string): GuildMember | ClientUser | undefined;
+    getChannelOption(name: string): Channel | undefined;
+    getRoleOption(name: string): Role | undefined;
+    private getOption;
+    private getOptionType;
+}
 export declare class CommandContext<InGuild extends boolean = boolean> {
     protected messageObject: Message;
+    options: CommandParameters;
     constructor(messageObject: Message);
     get activity(): import("discord.js").MessageActivity;
     get applicationId(): string;
     get attachments(): Collection<string, import("discord.js").Attachment>;
-    get author(): import("discord.js").User;
+    get author(): User;
     get bulkDeletable(): boolean;
     get channel(): import("discord.js").DMChannel | import("discord.js").PartialDMChannel | import("discord.js").NewsChannel | import("discord.js").StageChannel | import("discord.js").TextChannel | import("discord.js").PrivateThreadChannel | import("discord.js").PublicThreadChannel<boolean> | import("discord.js").VoiceChannel;
     get channelId(): string;
@@ -30,7 +53,7 @@ export declare class CommandContext<InGuild extends boolean = boolean> {
     get hasThread(): boolean;
     get id(): string;
     get interaction(): import("discord.js").MessageInteraction;
-    get member(): import("discord.js").GuildMember;
+    get member(): GuildMember;
     get mentions(): import("discord.js").MessageMentions<boolean>;
     get nonce(): string | number;
     get partial(): false;
@@ -72,8 +95,9 @@ export declare class CommandContext<InGuild extends boolean = boolean> {
     toString(): string;
     unpin(reason?: string): Promise<Message<boolean>>;
     inGuild(): this is Message<true>;
-    get me(): Client<true>;
+    get me(): ClientUser;
     send(options: string | MessagePayload | MessageCreateOptions): Promise<Message<true>> | Promise<Message<false>>;
+    prepareOptionValues(): void;
 }
 export declare class PrefixCommandBuilder {
     name: string;
@@ -83,10 +107,11 @@ export declare class PrefixCommandBuilder {
     setName(name: string): this;
     runCommand(executor?: (ctx: CommandContext) => void): this;
     prepareCommand(): void;
+    addOptions(...options: CommandParameterOptions[]): this;
 }
-export declare class CommandManager {
+export declare class PrefixCommandManager {
     client: Client;
-    options: CommandOptions;
-    constructor(client: Client, options: CommandOptions);
+    options: PrefixCommandBuilderSettings;
+    constructor(client: Client, options: PrefixCommandBuilderSettings);
     registerCommands(...commands: PrefixCommandBuilder[]): void;
 }

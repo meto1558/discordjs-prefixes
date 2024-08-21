@@ -428,7 +428,6 @@ export class CommandContext<InGuild extends boolean = boolean> {
 
     public prepareOptionValues() {
         const args = this.messageObject.content.trim().split(" ");
-        const startingIndex = args.length + 1; // Skip command name
         const mentions = this.messageObject.mentions;
 
         sharedOptionList.forEach((option, index) => {
@@ -458,9 +457,9 @@ export class CommandContext<InGuild extends boolean = boolean> {
             if (option.isLongText && option.type != "string")
                 throw new ParameterError(`Long text can only be of type string. (Reminder: Long text options can only be added as a last option.)`);
             else if (option.isLongText && option.type == "string")
-                option.value = args.slice(index, args.length + 1).join(" ");
+                option.value = args.slice(index, args.length).join(" ");
             else
-                option.value = args[index];
+                option.value = args[index + 1];
         });
     }
 }
@@ -509,7 +508,8 @@ export class PrefixCommandManager {
             for (const command of commands) {
                 const context = new CommandContext(msg);
                 command.setContext(context);
-                if (msg.content.startsWith(`${this.options.prefix}${command.name}`)) {
+                const args = msg.content.trim().split(" ");
+                if (args.includes(`${this.options.prefix}${command.name}`)) {
                     context.prepareOptionValues();
                     command.prepareCommand();
                 }

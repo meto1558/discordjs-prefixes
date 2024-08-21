@@ -8,7 +8,6 @@ export class PrefixCommandBuilderSettings {
 export type CommandParameterType =
     "string" |
     "number" |
-    "text" |
     "user" |
     "member" |
     "channel" |

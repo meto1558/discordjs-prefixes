@@ -3,7 +3,7 @@ export declare class PrefixCommandBuilderSettings {
     prefix: string;
     useHelpCommand?: boolean | undefined;
 }
-export type CommandParameterType = "string" | "number" | "text" | "user" | "member" | "channel" | "role";
+export type CommandParameterType = "string" | "number" | "user" | "member" | "channel" | "role";
 export interface CommandParameterOptions {
     name: string | undefined;
     type: CommandParameterType | undefined;

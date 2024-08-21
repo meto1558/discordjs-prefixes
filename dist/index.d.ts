@@ -3,17 +3,25 @@ export declare class PrefixCommandBuilderSettings {
     prefix: string;
     useHelpCommand?: boolean | undefined;
 }
-export type CommandParameterType = "string" | "number" | "user" | "member" | "channel" | "role";
+export declare enum CommandParameterTypes {
+    String = "string",
+    Number = "number",
+    User = "user",
+    Member = "member",
+    Channel = "channel",
+    Role = "role"
+}
+export type CommandParameters = "string" | "number" | "user" | "member" | "channel" | "role";
 export interface CommandParameterOptions {
     name: string | undefined;
-    type: CommandParameterType | undefined;
+    type: CommandParameters | CommandParameterTypes | undefined;
     isLongText?: boolean | undefined;
     value?: any | undefined;
 }
 export declare class ParameterError extends Error {
 }
 export declare let sharedOptionList: CommandParameterOptions[];
-export declare class CommandParameters {
+export declare class ContextOptions {
     private options;
     addOptions(...options: CommandParameterOptions[]): void;
     getStringOption(name: string): string | undefined;
@@ -27,7 +35,7 @@ export declare class CommandParameters {
 }
 export declare class CommandContext<InGuild extends boolean = boolean> {
     protected messageObject: Message;
-    options: CommandParameters;
+    options: ContextOptions;
     constructor(messageObject: Message);
     get activity(): import("discord.js").MessageActivity;
     get applicationId(): string;

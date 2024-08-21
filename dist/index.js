@@ -1,14 +1,23 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PrefixCommandManager = exports.PrefixCommandBuilder = exports.CommandContext = exports.CommandParameters = exports.sharedOptionList = exports.ParameterError = exports.PrefixCommandBuilderSettings = void 0;
+exports.PrefixCommandManager = exports.PrefixCommandBuilder = exports.CommandContext = exports.ContextOptions = exports.sharedOptionList = exports.ParameterError = exports.CommandParameterTypes = exports.PrefixCommandBuilderSettings = void 0;
 class PrefixCommandBuilderSettings {
 }
 exports.PrefixCommandBuilderSettings = PrefixCommandBuilderSettings;
+var CommandParameterTypes;
+(function (CommandParameterTypes) {
+    CommandParameterTypes["String"] = "string";
+    CommandParameterTypes["Number"] = "number";
+    CommandParameterTypes["User"] = "user";
+    CommandParameterTypes["Member"] = "member";
+    CommandParameterTypes["Channel"] = "channel";
+    CommandParameterTypes["Role"] = "role";
+})(CommandParameterTypes || (exports.CommandParameterTypes = CommandParameterTypes = {}));
 class ParameterError extends Error {
 }
 exports.ParameterError = ParameterError;
 exports.sharedOptionList = [];
-class CommandParameters {
+class ContextOptions {
     constructor() {
         this.options = [];
     }
@@ -100,10 +109,10 @@ class CommandParameters {
         throw new ParameterError(`There is no such option: '${name}'`);
     }
 }
-exports.CommandParameters = CommandParameters;
+exports.ContextOptions = ContextOptions;
 class CommandContext {
     constructor(messageObject) {
-        this.options = new CommandParameters();
+        this.options = new ContextOptions();
         this.messageObject = messageObject;
         this.options.addOptions(...exports.sharedOptionList);
     }

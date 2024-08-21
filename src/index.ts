@@ -5,7 +5,16 @@ export class PrefixCommandBuilderSettings {
     useHelpCommand?: boolean | undefined;
 }
 
-export type CommandParameterType =
+export enum CommandParameterTypes {
+    String = "string",
+    Number = "number",
+    User = "user",
+    Member = "member",
+    Channel = "channel",
+    Role = "role"
+}
+
+export type CommandParameters =
     "string" |
     "number" |
     "user" |
@@ -15,7 +24,7 @@ export type CommandParameterType =
 
 export interface CommandParameterOptions {
     name: string | undefined;
-    type: CommandParameterType | undefined;
+    type: CommandParameters | CommandParameterTypes | undefined;
     isLongText?: boolean | undefined;
     value?: any | undefined;
 }
@@ -24,7 +33,7 @@ export class ParameterError extends Error { }
 
 export let sharedOptionList: CommandParameterOptions[] = [];
 
-export class CommandParameters {
+export class ContextOptions {
     private options: CommandParameterOptions[] = [];
 
     public addOptions(...options: CommandParameterOptions[]) {
@@ -116,7 +125,7 @@ export class CommandParameters {
         throw new ParameterError(`There is no such option: '${name}'`);
     }
 
-    private getOptionType(name: string): CommandParameterType | undefined {
+    private getOptionType(name: string): CommandParameters | CommandParameterTypes | undefined {
         if (this.options.length < 1) return undefined;
 
         for (const option of this.options) {
@@ -132,7 +141,7 @@ export class CommandParameters {
 
 export class CommandContext<InGuild extends boolean = boolean> {
     protected messageObject: Message;
-    public options = new CommandParameters();
+    public options = new ContextOptions();
 
     public constructor(messageObject: Message) {
         this.messageObject = messageObject;

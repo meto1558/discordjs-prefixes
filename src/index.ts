@@ -142,10 +142,12 @@ export class ContextOptions {
 export class CommandContext<InGuild extends boolean = boolean> {
     protected messageObject: Message;
     public options = new ContextOptions();
+    private builder: PrefixCommandBuilder;
 
-    public constructor(messageObject: Message) {
+    public constructor(messageObject: Message, builderObject: PrefixCommandBuilder) {
         this.messageObject = messageObject;
-        this.options.addOptions(...sharedOptionList);
+        this.builder = builderObject;
+        this.options.addOptions(...this.builder.getOptionList());
     }
 
     // Message Class Proxy
@@ -428,57 +430,34 @@ export class CommandContext<InGuild extends boolean = boolean> {
 
     public purgeChannel(amount: number) {
         return (this.messageObject.channel as TextChannel).bulkDelete(amount);
-    } 
+    }
 
     public prepareOptionValues() {
-        const args = this.messageObject.content.trim().split(" ");
+        const args = this.messageObject.content.trim().split(" ").slice(1);
         const mentions = this.messageObject.mentions;
 
-        let argIndex = 1;
-
-        sharedOptionList.forEach((option, index) => {
+        this.builder.forEachOptions((option, index) => {
             switch (option.type) {
                 case "user":
-                    if (mentions.users.size > 0) {
-                        option.value = mentions.users.first();
-                        return;
-                    }
+                    option.value = mentions.users.size > 0 ? mentions.users.first() : undefined;
                     break;
                 case "member":
-                    if (mentions.members.size > 0) {
-                        option.value = mentions.members.first();
-                        return;
-                    }
+                    option.value = mentions.members.size > 0 ? mentions.members.first() : undefined;
                     break;
                 case "channel":
-                    if (mentions.channels.size > 0) {
-                        option.value = mentions.channels.first();
-                        return;
-                    }
+                    option.value = mentions.channels.size > 0 ? mentions.channels.first() : undefined;
                     break;
                 case "role":
-                    if (mentions.roles.size > 0) {
-                        option.value = mentions.roles.first();
-                        return;
-                    }
+                    option.value = mentions.roles.size > 0 ? mentions.roles.first() : undefined;
                     break;
                 case "string":
-                    if (option.isLongText) {
-                        option.value = args.slice(index, args.length).join(" ");
-                        return;
-                    } else {
-                        option.value = args[argIndex];
-                    }
+                    option.value = option.isLongText ? args.slice(index).join(" ") : args[index];
                     break;
                 case "number":
-                    option.value = Number(args[argIndex]);
+                    option.value = Number(args[index]);
                     break;
                 default:
                     throw new ParameterError(`Unknown type: ${option.type}`);
-            }
-
-            if (!option.isLongText) {
-                argIndex++;
             }
         });
     }
@@ -487,6 +466,7 @@ export class CommandContext<InGuild extends boolean = boolean> {
 export class PrefixCommandBuilder {
     public name: string;
     private requiredContext: CommandContext;
+    private optionList: CommandParameterOptions[] = [];
     private executor?: (ctx: CommandContext) => void;
 
     public setContext(context: CommandContext) {
@@ -506,12 +486,20 @@ export class PrefixCommandBuilder {
     public prepareCommand() {
         if (this.executor && this.requiredContext)
             this.executor(this.requiredContext);
-        
+
     }
 
     public addOptions(...options: CommandParameterOptions[]) {
-        sharedOptionList.push(...options);
+        this.optionList.push(...options);
         return this;
+    }
+
+    public getOptionList() {
+        return this.optionList;
+    }
+
+    public forEachOptions(callback: (option: CommandParameterOptions, index: number) => void) {
+        this.optionList.forEach(callback);
     }
 }
 
@@ -527,12 +515,13 @@ export class PrefixCommandManager {
     public registerCommands(...commands: PrefixCommandBuilder[]) {
         this.client.on("messageCreate", (msg) => {
             for (const command of commands) {
-                const context = new CommandContext(msg);
+                const context = new CommandContext(msg, command);
                 command.setContext(context);
                 const args = msg.content.trim().split(" ");
                 if (args.includes(`${this.options.prefix}${command.name}`)) {
                     context.prepareOptionValues();
                     command.prepareCommand();
+                    break;
                 }
             }
         })

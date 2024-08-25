@@ -111,10 +111,11 @@ class ContextOptions {
 }
 exports.ContextOptions = ContextOptions;
 class CommandContext {
-    constructor(messageObject) {
+    constructor(messageObject, builderObject) {
         this.options = new ContextOptions();
         this.messageObject = messageObject;
-        this.options.addOptions(...sharedOptionList);
+        this.builder = builderObject;
+        this.options.addOptions(...this.builder.getOptionList());
     }
     // Message Class Proxy
     get activity() {
@@ -326,58 +327,39 @@ class CommandContext {
         return this.messageObject.channel.bulkDelete(amount);
     }
     prepareOptionValues() {
-        const args = this.messageObject.content.trim().split(" ");
+        const args = this.messageObject.content.trim().split(" ").slice(1);
         const mentions = this.messageObject.mentions;
-        let argIndex = 1;
-        sharedOptionList.forEach((option, index) => {
+        this.builder.forEachOptions((option, index) => {
             switch (option.type) {
                 case "user":
-                    if (mentions.users.size > 0) {
-                        option.value = mentions.users.first();
-                        return;
-                    }
+                    option.value = mentions.users.size > 0 ? mentions.users.first() : undefined;
                     break;
                 case "member":
-                    if (mentions.members.size > 0) {
-                        option.value = mentions.members.first();
-                        return;
-                    }
+                    option.value = mentions.members.size > 0 ? mentions.members.first() : undefined;
                     break;
                 case "channel":
-                    if (mentions.channels.size > 0) {
-                        option.value = mentions.channels.first();
-                        return;
-                    }
+                    option.value = mentions.channels.size > 0 ? mentions.channels.first() : undefined;
                     break;
                 case "role":
-                    if (mentions.roles.size > 0) {
-                        option.value = mentions.roles.first();
-                        return;
-                    }
+                    option.value = mentions.roles.size > 0 ? mentions.roles.first() : undefined;
                     break;
                 case "string":
-                    if (option.isLongText) {
-                        option.value = args.slice(index, args.length).join(" ");
-                        return;
-                    }
-                    else {
-                        option.value = args[argIndex];
-                    }
+                    option.value = option.isLongText ? args.slice(index).join(" ") : args[index];
                     break;
                 case "number":
-                    option.value = Number(args[argIndex]);
+                    option.value = Number(args[index]);
                     break;
                 default:
                     throw new ParameterError(`Unknown type: ${option.type}`);
-            }
-            if (!option.isLongText) {
-                argIndex++;
             }
         });
     }
 }
 exports.CommandContext = CommandContext;
 class PrefixCommandBuilder {
+    constructor() {
+        this.optionList = [];
+    }
     setContext(context) {
         this.requiredContext = context;
     }
@@ -394,8 +376,14 @@ class PrefixCommandBuilder {
             this.executor(this.requiredContext);
     }
     addOptions(...options) {
-        sharedOptionList.push(...options);
+        this.optionList.push(...options);
         return this;
+    }
+    getOptionList() {
+        return this.optionList;
+    }
+    forEachOptions(callback) {
+        this.optionList.forEach(callback);
     }
 }
 exports.PrefixCommandBuilder = PrefixCommandBuilder;
@@ -407,12 +395,13 @@ class PrefixCommandManager {
     registerCommands(...commands) {
         this.client.on("messageCreate", (msg) => {
             for (const command of commands) {
-                const context = new CommandContext(msg);
+                const context = new CommandContext(msg, command);
                 command.setContext(context);
                 const args = msg.content.trim().split(" ");
                 if (args.includes(`${this.options.prefix}${command.name}`)) {
                     context.prepareOptionValues();
                     command.prepareCommand();
+                    break;
                 }
             }
         });

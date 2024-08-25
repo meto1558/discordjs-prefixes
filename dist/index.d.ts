@@ -35,7 +35,8 @@ export declare class ContextOptions {
 export declare class CommandContext<InGuild extends boolean = boolean> {
     protected messageObject: Message;
     options: ContextOptions;
-    constructor(messageObject: Message);
+    private builder;
+    constructor(messageObject: Message, builderObject: PrefixCommandBuilder);
     get activity(): import("discord.js").MessageActivity;
     get applicationId(): string;
     get attachments(): Collection<string, import("discord.js").Attachment>;
@@ -110,12 +111,15 @@ export declare class CommandContext<InGuild extends boolean = boolean> {
 export declare class PrefixCommandBuilder {
     name: string;
     private requiredContext;
+    private optionList;
     private executor?;
     setContext(context: CommandContext): void;
     setName(name: string): this;
     runCommand(executor?: (ctx: CommandContext) => void): this;
     prepareCommand(): void;
     addOptions(...options: CommandParameterOptions[]): this;
+    getOptionList(): CommandParameterOptions[];
+    forEachOptions(callback: (option: CommandParameterOptions, index: number) => void): void;
 }
 export declare class PrefixCommandManager {
     client: Client;

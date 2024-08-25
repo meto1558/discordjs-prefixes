@@ -1,4 +1,6 @@
-import { Client, Message, Snowflake, Collection, MessageActionRowComponent, AwaitMessageCollectorOptionsParams, MappedInteractionTypes, MessageComponentType, AwaitReactionsOptions, ReactionCollectorOptions, ReactionCollector, MessageCollectorOptionsParams, InteractionCollector, MessageEditOptions, MessagePayload, EmojiIdentifierResolvable, MessageReaction, MessageReplyOptions, StartThreadOptions, AnyThreadChannel, MessageCreateOptions, User, GuildMember, Channel, Role, ClientUser } from "discord.js";
+import { Client, Message, Snowflake, Collection, MessageActionRowComponent, AwaitMessageCollectorOptionsParams, MappedInteractionTypes, MessageComponentType, AwaitReactionsOptions, ReactionCollectorOptions, ReactionCollector, MessageCollectorOptionsParams, InteractionCollector, MessageEditOptions, MessagePayload, EmojiIdentifierResolvable, MessageReaction, MessageReplyOptions, StartThreadOptions, AnyThreadChannel, MessageCreateOptions, User, GuildMember, Channel, Role, ClientUser, TextChannel } from "discord.js";
+
+let sharedOptionList: CommandParameterOptions[] = [];
 
 export class PrefixCommandBuilderSettings {
     prefix: string;
@@ -31,13 +33,11 @@ export interface CommandParameterOptions {
 
 export class ParameterError extends Error { }
 
-export let sharedOptionList: CommandParameterOptions[] = [];
-
 export class ContextOptions {
-    private options: CommandParameterOptions[] = [];
+    private specialOptionList: CommandParameterOptions[] = [];
 
-    public addOptions(...options: CommandParameterOptions[]) {
-        this.options.push(...options);
+    public addOptions(...optionList: CommandParameterOptions[]) {
+        this.specialOptionList = optionList;
 
     }
 
@@ -114,9 +114,9 @@ export class ContextOptions {
     }
 
     private getOption(name: string): any | undefined {
-        if (this.options.length < 1) return undefined;
+        if (this.specialOptionList.length < 1) return undefined;
 
-        for (const option of this.options) {
+        for (const option of this.specialOptionList) {
             if (!option.name.trim()) throw new ParameterError(`The option name cannot be empty.`);
 
             if (option.name === name) return option.value;
@@ -126,9 +126,9 @@ export class ContextOptions {
     }
 
     private getOptionType(name: string): CommandParameters | CommandParameterTypes | undefined {
-        if (this.options.length < 1) return undefined;
+        if (this.specialOptionList.length < 1) return undefined;
 
-        for (const option of this.options) {
+        for (const option of this.specialOptionList) {
             if (!option.name.trim()) throw new ParameterError(`The option name cannot be empty.`);
             if (!option.type) throw new ParameterError(`The option type cannot be empty.`);
 
@@ -426,9 +426,15 @@ export class CommandContext<InGuild extends boolean = boolean> {
         return this.messageObject.channel.send(options);
     }
 
+    public purgeChannel(amount: number) {
+        return (this.messageObject.channel as TextChannel).bulkDelete(amount);
+    } 
+
     public prepareOptionValues() {
         const args = this.messageObject.content.trim().split(" ");
         const mentions = this.messageObject.mentions;
+
+        let argIndex = 1;
 
         sharedOptionList.forEach((option, index) => {
             switch (option.type) {
@@ -437,29 +443,43 @@ export class CommandContext<InGuild extends boolean = boolean> {
                         option.value = mentions.users.first();
                         return;
                     }
+                    break;
                 case "member":
                     if (mentions.members.size > 0) {
                         option.value = mentions.members.first();
                         return;
                     }
+                    break;
                 case "channel":
                     if (mentions.channels.size > 0) {
                         option.value = mentions.channels.first();
                         return;
                     }
+                    break;
                 case "role":
                     if (mentions.roles.size > 0) {
                         option.value = mentions.roles.first();
                         return;
                     }
+                    break;
+                case "string":
+                    if (option.isLongText) {
+                        option.value = args.slice(index, args.length).join(" ");
+                        return;
+                    } else {
+                        option.value = args[argIndex];
+                    }
+                    break;
+                case "number":
+                    option.value = Number(args[argIndex]);
+                    break;
+                default:
+                    throw new ParameterError(`Unknown type: ${option.type}`);
             }
 
-            if (option.isLongText && option.type != "string")
-                throw new ParameterError(`Long text can only be of type string. (Reminder: Long text options can only be added as a last option.)`);
-            else if (option.isLongText && option.type == "string")
-                option.value = args.slice(index, args.length).join(" ");
-            else
-                option.value = args[index + 1];
+            if (!option.isLongText) {
+                argIndex++;
+            }
         });
     }
 }
@@ -486,6 +506,7 @@ export class PrefixCommandBuilder {
     public prepareCommand() {
         if (this.executor && this.requiredContext)
             this.executor(this.requiredContext);
+        
     }
 
     public addOptions(...options: CommandParameterOptions[]) {

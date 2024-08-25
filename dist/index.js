@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PrefixCommandManager = exports.PrefixCommandBuilder = exports.CommandContext = exports.ContextOptions = exports.sharedOptionList = exports.ParameterError = exports.CommandParameterTypes = exports.PrefixCommandBuilderSettings = void 0;
+exports.PrefixCommandManager = exports.PrefixCommandBuilder = exports.CommandContext = exports.ContextOptions = exports.ParameterError = exports.CommandParameterTypes = exports.PrefixCommandBuilderSettings = void 0;
+let sharedOptionList = [];
 class PrefixCommandBuilderSettings {
 }
 exports.PrefixCommandBuilderSettings = PrefixCommandBuilderSettings;
@@ -16,13 +17,12 @@ var CommandParameterTypes;
 class ParameterError extends Error {
 }
 exports.ParameterError = ParameterError;
-exports.sharedOptionList = [];
 class ContextOptions {
     constructor() {
-        this.options = [];
+        this.specialOptionList = [];
     }
-    addOptions(...options) {
-        this.options.push(...options);
+    addOptions(...optionList) {
+        this.specialOptionList = optionList;
     }
     getStringOption(name) {
         const option = this.getOption(name);
@@ -85,9 +85,9 @@ class ContextOptions {
         return option;
     }
     getOption(name) {
-        if (this.options.length < 1)
+        if (this.specialOptionList.length < 1)
             return undefined;
-        for (const option of this.options) {
+        for (const option of this.specialOptionList) {
             if (!option.name.trim())
                 throw new ParameterError(`The option name cannot be empty.`);
             if (option.name === name)
@@ -96,9 +96,9 @@ class ContextOptions {
         throw new ParameterError(`There is no such option: '${name}'`);
     }
     getOptionType(name) {
-        if (this.options.length < 1)
+        if (this.specialOptionList.length < 1)
             return undefined;
-        for (const option of this.options) {
+        for (const option of this.specialOptionList) {
             if (!option.name.trim())
                 throw new ParameterError(`The option name cannot be empty.`);
             if (!option.type)
@@ -114,7 +114,7 @@ class CommandContext {
     constructor(messageObject) {
         this.options = new ContextOptions();
         this.messageObject = messageObject;
-        this.options.addOptions(...exports.sharedOptionList);
+        this.options.addOptions(...sharedOptionList);
     }
     // Message Class Proxy
     get activity() {
@@ -322,38 +322,57 @@ class CommandContext {
     send(options) {
         return this.messageObject.channel.send(options);
     }
+    purgeChannel(amount) {
+        return this.messageObject.channel.bulkDelete(amount);
+    }
     prepareOptionValues() {
         const args = this.messageObject.content.trim().split(" ");
         const mentions = this.messageObject.mentions;
-        exports.sharedOptionList.forEach((option, index) => {
+        let argIndex = 1;
+        sharedOptionList.forEach((option, index) => {
             switch (option.type) {
                 case "user":
                     if (mentions.users.size > 0) {
                         option.value = mentions.users.first();
                         return;
                     }
+                    break;
                 case "member":
                     if (mentions.members.size > 0) {
                         option.value = mentions.members.first();
                         return;
                     }
+                    break;
                 case "channel":
                     if (mentions.channels.size > 0) {
                         option.value = mentions.channels.first();
                         return;
                     }
+                    break;
                 case "role":
                     if (mentions.roles.size > 0) {
                         option.value = mentions.roles.first();
                         return;
                     }
+                    break;
+                case "string":
+                    if (option.isLongText) {
+                        option.value = args.slice(index, args.length).join(" ");
+                        return;
+                    }
+                    else {
+                        option.value = args[argIndex];
+                    }
+                    break;
+                case "number":
+                    option.value = Number(args[argIndex]);
+                    break;
+                default:
+                    throw new ParameterError(`Unknown type: ${option.type}`);
             }
-            if (option.isLongText && option.type != "string")
-                throw new ParameterError(`Long text can only be of type string. (Reminder: Long text options can only be added as a last option.)`);
-            else if (option.isLongText && option.type == "string")
-                option.value = args.slice(index, args.length).join(" ");
-            else
-                option.value = args[index + 1];
+            if (!option.isLongText) {
+                argIndex++;
+            }
         });
     }
 }
@@ -375,7 +394,7 @@ class PrefixCommandBuilder {
             this.executor(this.requiredContext);
     }
     addOptions(...options) {
-        exports.sharedOptionList.push(...options);
+        sharedOptionList.push(...options);
         return this;
     }
 }

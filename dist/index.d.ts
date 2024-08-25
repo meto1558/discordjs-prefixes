@@ -1,4 +1,4 @@
-import { Client, Message, Snowflake, Collection, MessageActionRowComponent, AwaitMessageCollectorOptionsParams, MappedInteractionTypes, MessageComponentType, AwaitReactionsOptions, ReactionCollectorOptions, ReactionCollector, MessageCollectorOptionsParams, InteractionCollector, MessageEditOptions, MessagePayload, EmojiIdentifierResolvable, MessageReaction, MessageReplyOptions, StartThreadOptions, AnyThreadChannel, MessageCreateOptions, User, GuildMember, Channel, Role, ClientUser } from "discord.js";
+import { Client, Message, Snowflake, Collection, MessageActionRowComponent, AwaitMessageCollectorOptionsParams, MappedInteractionTypes, MessageComponentType, AwaitReactionsOptions, ReactionCollectorOptions, ReactionCollector, MessageCollectorOptionsParams, InteractionCollector, MessageEditOptions, MessagePayload, EmojiIdentifierResolvable, MessageReaction, MessageReplyOptions, StartThreadOptions, AnyThreadChannel, MessageCreateOptions, User, GuildMember, Channel, Role, ClientUser, TextChannel } from "discord.js";
 export declare class PrefixCommandBuilderSettings {
     prefix: string;
     useHelpCommand?: boolean | undefined;
@@ -20,10 +20,9 @@ export interface CommandParameterOptions {
 }
 export declare class ParameterError extends Error {
 }
-export declare let sharedOptionList: CommandParameterOptions[];
 export declare class ContextOptions {
-    private options;
-    addOptions(...options: CommandParameterOptions[]): void;
+    private specialOptionList;
+    addOptions(...optionList: CommandParameterOptions[]): void;
     getStringOption(name: string): string | undefined;
     getNumberOption(name: string): number | undefined;
     getUserOption(name: string): User | ClientUser | undefined;
@@ -42,7 +41,7 @@ export declare class CommandContext<InGuild extends boolean = boolean> {
     get attachments(): Collection<string, import("discord.js").Attachment>;
     get author(): User;
     get bulkDeletable(): boolean;
-    get channel(): import("discord.js").DMChannel | import("discord.js").PartialDMChannel | import("discord.js").NewsChannel | import("discord.js").StageChannel | import("discord.js").TextChannel | import("discord.js").PrivateThreadChannel | import("discord.js").PublicThreadChannel<boolean> | import("discord.js").VoiceChannel;
+    get channel(): import("discord.js").DMChannel | import("discord.js").PartialDMChannel | import("discord.js").NewsChannel | import("discord.js").StageChannel | TextChannel | import("discord.js").PrivateThreadChannel | import("discord.js").PublicThreadChannel<boolean> | import("discord.js").VoiceChannel;
     get channelId(): string;
     get cleanContent(): string;
     get components(): import("discord.js").ActionRow<MessageActionRowComponent>[];
@@ -105,6 +104,7 @@ export declare class CommandContext<InGuild extends boolean = boolean> {
     inGuild(): this is Message<true>;
     get me(): ClientUser;
     send(options: string | MessagePayload | MessageCreateOptions): Promise<Message<true>> | Promise<Message<false>>;
+    purgeChannel(amount: number): Promise<Collection<string, Message<boolean> | import("discord.js").PartialMessage>>;
     prepareOptionValues(): void;
 }
 export declare class PrefixCommandBuilder {

@@ -110,11 +110,13 @@ export declare class CommandContext<InGuild extends boolean = boolean> {
 }
 export declare class PrefixCommandBuilder {
     name: string;
+    aliases: string[];
     private requiredContext;
     private optionList;
     private executor?;
     setContext(context: CommandContext): void;
     setName(name: string): this;
+    addAliases(...aliases: string[]): this;
     runCommand(executor?: (ctx: CommandContext) => void): this;
     prepareCommand(): void;
     addOptions(...options: CommandParameterOptions[]): this;

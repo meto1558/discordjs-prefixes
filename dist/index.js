@@ -358,6 +358,7 @@ class CommandContext {
 exports.CommandContext = CommandContext;
 class PrefixCommandBuilder {
     constructor() {
+        this.aliases = [];
         this.optionList = [];
     }
     setContext(context) {
@@ -365,6 +366,10 @@ class PrefixCommandBuilder {
     }
     setName(name) {
         this.name = name;
+        return this;
+    }
+    addAliases(...aliases) {
+        this.aliases.push(...aliases);
         return this;
     }
     runCommand(executor) {
@@ -398,7 +403,16 @@ class PrefixCommandManager {
                 const context = new CommandContext(msg, command);
                 command.setContext(context);
                 const args = msg.content.trim().split(" ");
-                if (args.includes(`${this.options.prefix}${command.name}`)) {
+                const isCommand = () => {
+                    for (const alias of command.aliases) {
+                        if (args.includes(`${this.options.prefix}${alias}`))
+                            return true;
+                    }
+                    if (args.includes(`${this.options.prefix}${command.name}`))
+                        return true;
+                    return false;
+                };
+                if (isCommand()) {
                     context.prepareOptionValues();
                     command.prepareCommand();
                     break;

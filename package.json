@@ -1,6 +1,6 @@
 {
   "name": "discordjs-prefixes",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A library designed for Discord.js v14 that allows you to quickly add and manage prefix commands.",
   "main": "./dist/index.js",
   "scripts": {

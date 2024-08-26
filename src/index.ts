@@ -465,6 +465,7 @@ export class CommandContext<InGuild extends boolean = boolean> {
 
 export class PrefixCommandBuilder {
     public name: string;
+    public aliases: string[] = [];
     private requiredContext: CommandContext;
     private optionList: CommandParameterOptions[] = [];
     private executor?: (ctx: CommandContext) => void;
@@ -475,6 +476,11 @@ export class PrefixCommandBuilder {
 
     public setName(name: string) {
         this.name = name;
+        return this;
+    }
+
+    public addAliases(...aliases: string[]) {
+        this.aliases.push(...aliases);
         return this;
     }
 
@@ -518,7 +524,19 @@ export class PrefixCommandManager {
                 const context = new CommandContext(msg, command);
                 command.setContext(context);
                 const args = msg.content.trim().split(" ");
-                if (args.includes(`${this.options.prefix}${command.name}`)) {
+                const isCommand = (): boolean => {
+                    for (const alias of command.aliases) {
+                        if (args.includes(`${this.options.prefix}${alias}`)) 
+                            return true;
+                    }
+
+                    if (args.includes(`${this.options.prefix}${command.name}`))
+                        return true;
+
+                    return false;
+                }
+
+                if (isCommand()) {
                     context.prepareOptionValues();
                     command.prepareCommand();
                     break;
